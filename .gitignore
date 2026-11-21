@@ -1,0 +1,15 @@
+.gradle/
+build/
+local.properties
+.idea/
+*.iml
+captures/
+*.log
+output-metadata.json
+*.apk
+*.aab
+*.jks
+*.keystore
+.kotlin/
+*.m4a
+*.wav
