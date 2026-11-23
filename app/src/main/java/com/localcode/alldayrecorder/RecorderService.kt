@@ -31,7 +31,7 @@ class RecorderService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (recorder == null && !startSegment()) {
             stopSelf()
-            return START_NOT_ALLOWED
+            return START_NOT_STICKY
         }
         return START_STICKY
     }
@@ -65,7 +65,7 @@ class RecorderService : Service() {
                     scheduleRetry()
                 }
             }
-            return true
+            return@setOnErrorListener
         }
 
         return try {
