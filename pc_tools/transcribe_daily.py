@@ -90,8 +90,19 @@ def segment_txt_name(path: Path, start: dt.datetime) -> str:
     return f"seg_{m.group(1)}_{start:%Y%m%dT%H%M%S}.txt" if m else path.stem + ".txt"
 
 
-def write_segment_txt(out: Path, src: Path, start: dt.datetime, pieces: list[tuple[float, str]]) -> None:
-    lines = [f"# {src.name}  開始 {start:%Y-%m-%d %H:%M:%S}"]
+def txt_key(path: Path) -> str | None:
+    """セグメント .txt の2行目に書いた元音声の SHA-256 を読む。"""
+    try:
+        with path.open(encoding="utf-8") as f:
+            f.readline()
+            line = f.readline().strip()
+    except (OSError, UnicodeDecodeError):
+        return None
+    return line[len("# sha256: "):] if line.startswith("# sha256: ") else None
+
+
+def write_segment_txt(out: Path, src: Path, start: dt.datetime, pieces: list[tuple[float, str]], key: str) -> None:
+    lines = [f"# {src.name}  開始 {start:%Y-%m-%d %H:%M:%S}", f"# sha256: {key}"]
     for offset, text in pieces:
         t = start + dt.timedelta(seconds=offset)
         lines.append(f"[{t:%H:%M:%S}] {text}")
@@ -112,7 +123,9 @@ def rebuild_context(day_dir: Path) -> int:
     segs.sort()
     parts = [f"# 日々のコンテキスト {day_dir.name}（{len(segs)} セグメント、時刻順）", ""]
     for _, p in segs:
-        parts.append(p.read_text(encoding="utf-8").rstrip())
+        body = [l for l in p.read_text(encoding="utf-8").splitlines() if not l.startswith("# sha256: ")]
+        parts.append("
+".join(body).rstrip())
         parts.append("")
     tmp = day_dir / "context.tmp"
     tmp.write_text("\n".join(parts), encoding="utf-8")
@@ -121,6 +134,11 @@ def rebuild_context(day_dir: Path) -> int:
 
 
 def main() -> int:
+    for stream in (sys.stdout, sys.stderr):  # cp932 コンソールでも落ちないように
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):
+            pass
     od = onedrive_root()
     ap = argparse.ArgumentParser()
     ap.add_argument("--output", type=Path, default=od / "日々のコンテキスト")
@@ -207,12 +225,11 @@ def main() -> int:
             pieces = [(s.start, s.text.strip()) for s in segments if s.text.strip()]
             day_dir.mkdir(parents=True, exist_ok=True)
             txt = day_dir / segment_txt_name(p, start)
-            owned = {r.get("txt") for k, r in files.items() if k != key and r.get("status") == "done"}
             n = 2
-            while str(txt) in owned:
+            while txt.exists() and txt_key(txt) != key:  # 別の音声の .txt は上書きしない
                 txt = day_dir / f"{Path(segment_txt_name(p, start)).stem}_{n}.txt"
                 n += 1
-            write_segment_txt(txt, p, start, pieces)
+            write_segment_txt(txt, p, start, pieces, key)
             elapsed = time.time() - t0
             files[key] = {"status": "done", "source": str(p), "txt": str(txt),
                           "audio_sec": round(info.duration, 1), "elapsed_sec": round(elapsed, 1),

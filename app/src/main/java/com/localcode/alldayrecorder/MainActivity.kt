@@ -82,7 +82,9 @@ class MainActivity : AppCompatActivity() {
         exportAllButton.setOnClickListener { exportAll() }
 
         sendTodayButton.setOnClickListener {
-            val today = SegmentRepository.completedSegmentsOf(this, SegmentRepository.today())
+            // 停止時に書き出した日の分を送る（停止後に日付が変わっても対象日がずれない）
+            val day = prefs().getString(PREF_EXPORTED_DAY, null) ?: SegmentRepository.today()
+            val today = SegmentRepository.completedSegmentsOf(this, day)
             if (today.isEmpty()) {
                 toast(getString(R.string.no_segments_today))
             } else {
@@ -210,10 +212,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateSendTodayButton(forceIfAny: Boolean = false) {
-        val today = SegmentRepository.today()
+        val exportedDay = prefs().getString(PREF_EXPORTED_DAY, null)
+        val day = if (forceIfAny || exportedDay == null) SegmentRepository.today() else exportedDay
         val stopped = !RecorderService.running
-        val exported = prefs().getString(PREF_EXPORTED_DAY, null) == today
-        val hasToday = SegmentRepository.completedSegmentsOf(this, today).isNotEmpty()
+        val exported = exportedDay == day
+        val hasToday = SegmentRepository.completedSegmentsOf(this, day).isNotEmpty()
         sendTodayButton.visibility =
             if (stopped && hasToday && (exported || forceIfAny)) View.VISIBLE else View.GONE
     }
