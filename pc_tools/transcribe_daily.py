@@ -135,18 +135,22 @@ def main() -> int:
 
     out_root: Path = args.output
     inputs: list[Path] = args.input or [out_root / "_録音受信"]
-    out_root.mkdir(parents=True, exist_ok=True)
-    for d in inputs:
-        d.mkdir(parents=True, exist_ok=True)
+    if not args.dry_run:
+        out_root.mkdir(parents=True, exist_ok=True)
+        for d in inputs:
+            d.mkdir(parents=True, exist_ok=True)
     state_path = out_root / STATE_NAME
     state = load_state(state_path)
     files: dict = state["files"]
 
     now = time.time()
     todo: list[tuple[Path, str, dt.datetime]] = []
-    report = {"done": [], "skipped_done": 0, "failed": [], "not_ready": [], "no_date": []}
+    report = {"done": [], "skipped_done": 0, "failed": [], "held": [], "not_ready": [], "no_date": []}
     seen: set[str] = set()
     for d in inputs:
+        if not d.is_dir():
+            print(f"（入力フォルダがまだありません: {d}）")
+            continue
         for p in sorted(d.rglob("*.m4a")):
             start = parse_start(p)
             if start is None:
@@ -169,7 +173,7 @@ def main() -> int:
                 report["skipped_done"] += 1
                 continue
             if rec and rec.get("status") == "failed" and rec.get("attempts", 0) >= MAX_ATTEMPTS:
-                report["failed"].append(f"{p}: {MAX_ATTEMPTS}回失敗のため保留（{rec.get('error')}）")
+                report["held"].append(f"{p}: {MAX_ATTEMPTS}回失敗のため保留（{rec.get('error')}）")
                 continue
             todo.append((p, key, start))
 
@@ -203,6 +207,11 @@ def main() -> int:
             pieces = [(s.start, s.text.strip()) for s in segments if s.text.strip()]
             day_dir.mkdir(parents=True, exist_ok=True)
             txt = day_dir / segment_txt_name(p, start)
+            owned = {r.get("txt") for k, r in files.items() if k != key and r.get("status") == "done"}
+            n = 2
+            while str(txt) in owned:
+                txt = day_dir / f"{Path(segment_txt_name(p, start)).stem}_{n}.txt"
+                n += 1
             write_segment_txt(txt, p, start, pieces)
             elapsed = time.time() - t0
             files[key] = {"status": "done", "source": str(p), "txt": str(txt),
@@ -228,9 +237,9 @@ def main() -> int:
     lines = [
         f"実行 {dt.datetime.now():%Y-%m-%d %H:%M:%S}  デバイス {device_used or '-'}",
         f"処理 {len(report['done'])} 件 / 処理済みスキップ {report['skipped_done']} 件 / "
-        f"失敗 {len(report['failed'])} 件 / 同期待ち {len(report['not_ready'])} 件 / 日付不明 {len(report['no_date'])} 件",
+        f"失敗 {len(report['failed'])} 件 / 保留 {len(report['held'])} 件 / 同期待ち {len(report['not_ready'])} 件 / 日付不明 {len(report['no_date'])} 件",
     ]
-    for k, label in (("done", "処理"), ("failed", "失敗"), ("not_ready", "同期待ち(次回)"), ("no_date", "日付不明(ファイル名が seg_NNNN_YYYYMMDDTHHMMSS でない)")):
+    for k, label in (("done", "処理"), ("failed", "失敗"), ("held", "保留(自動再試行しない。直すか消すと次回対象)"), ("not_ready", "同期待ち(次回)"), ("no_date", "日付不明(ファイル名が seg_NNNN_YYYYMMDDTHHMMSS でない)")):
         for item in report[k]:
             lines.append(f"[{label}] {item}")
     text = "\n".join(lines)

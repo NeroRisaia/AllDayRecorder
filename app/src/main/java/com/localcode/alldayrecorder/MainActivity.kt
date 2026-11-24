@@ -7,6 +7,8 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.os.PowerManager
 import android.os.SystemClock
 import android.provider.Settings
@@ -33,6 +35,15 @@ class MainActivity : AppCompatActivity() {
     private var shownSegments: List<Segment> = emptyList()
     private val worker = Executors.newSingleThreadExecutor()
     private var pendingExportAll = false
+    private val uiHandler = Handler(Looper.getMainLooper())
+
+    /** 録音中は一覧を定期更新（新セグメントと「録音中」印を反映）。 */
+    private val ticker = object : Runnable {
+        override fun run() {
+            if (RecorderService.running) refresh()
+            uiHandler.postDelayed(this, LIST_REFRESH_MS)
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -93,6 +104,13 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         refresh()
         updateSendTodayButton()
+        uiHandler.removeCallbacks(ticker)
+        uiHandler.postDelayed(ticker, 1_000L)
+    }
+
+    override fun onPause() {
+        uiHandler.removeCallbacks(ticker)
+        super.onPause()
     }
 
     override fun onDestroy() {
@@ -267,6 +285,7 @@ class MainActivity : AppCompatActivity() {
         private const val REQUEST_CODE = 1
         private const val REQUEST_STORAGE = 2
         private const val STOP_WAIT_MS = 10_000L
+        private const val LIST_REFRESH_MS = 3_000L
         private const val PREF_EXPORTED_DAY = "exported_day"
     }
 }

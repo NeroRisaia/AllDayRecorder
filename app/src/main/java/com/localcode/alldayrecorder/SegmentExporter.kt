@@ -1,6 +1,7 @@
 package com.localcode.alldayrecorder
 
 import android.content.ClipData
+import android.content.ClipDescription
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
@@ -116,7 +117,7 @@ object SegmentExporter {
             Intent(Intent.ACTION_SEND_MULTIPLE).putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris)
         }
         send.type = MIME
-        val clip = ClipData.newUri(context.contentResolver, segments[0].name, uris[0])
+        val clip = ClipData(ClipDescription(segments[0].name, arrayOf(MIME)), ClipData.Item(uris[0]))
         uris.drop(1).forEach { clip.addItem(ClipData.Item(it)) }
         send.clipData = clip
         send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
