@@ -1,0 +1,3 @@
+*.bat -text
+*.cmd -text
+gradlew text eol=lf
