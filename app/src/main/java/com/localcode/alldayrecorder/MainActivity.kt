@@ -72,6 +72,10 @@ class MainActivity : AppCompatActivity() {
             sendTodayButton.visibility = View.GONE
             exportStatus.text = ""
             refresh()
+            // Android 9 以下: 停止後の自動書き出しに要る権限を、録音は止めずにここで求める
+            if (!hasLegacyStoragePermission()) {
+                requestPermissions(arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE), REQUEST_STORAGE)
+            }
         }
 
         stopButton.setOnClickListener {

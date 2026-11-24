@@ -90,15 +90,18 @@ def segment_txt_name(path: Path, start: dt.datetime) -> str:
     return f"seg_{m.group(1)}_{start:%Y%m%dT%H%M%S}.txt" if m else path.stem + ".txt"
 
 
-def txt_key(path: Path) -> str | None:
-    """セグメント .txt の2行目に書いた元音声の SHA-256 を読む。"""
+def txt_key(path: Path, src: Path) -> str | None:
+    """セグメント .txt の2行目に書いた元音声の SHA-256 を読む。
+    sha256 行の無い旧形式は、1行目の元ファイル名が同じなら同じ音声とみなす（"same" を返す）。"""
     try:
         with path.open(encoding="utf-8") as f:
-            f.readline()
+            first = f.readline().strip()
             line = f.readline().strip()
     except (OSError, UnicodeDecodeError):
         return None
-    return line[len("# sha256: "):] if line.startswith("# sha256: ") else None
+    if line.startswith("# sha256: "):
+        return line[len("# sha256: "):]
+    return "same" if first.startswith(f"# {src.name}  ") else None
 
 
 def write_segment_txt(out: Path, src: Path, start: dt.datetime, pieces: list[tuple[float, str]], key: str) -> None:
@@ -124,8 +127,7 @@ def rebuild_context(day_dir: Path) -> int:
     parts = [f"# 日々のコンテキスト {day_dir.name}（{len(segs)} セグメント、時刻順）", ""]
     for _, p in segs:
         body = [l for l in p.read_text(encoding="utf-8").splitlines() if not l.startswith("# sha256: ")]
-        parts.append("
-".join(body).rstrip())
+        parts.append("\n".join(body).rstrip())
         parts.append("")
     tmp = day_dir / "context.tmp"
     tmp.write_text("\n".join(parts), encoding="utf-8")
@@ -226,7 +228,7 @@ def main() -> int:
             day_dir.mkdir(parents=True, exist_ok=True)
             txt = day_dir / segment_txt_name(p, start)
             n = 2
-            while txt.exists() and txt_key(txt) != key:  # 別の音声の .txt は上書きしない
+            while txt.exists() and txt_key(txt, p) not in (key, "same"):  # 別の音声の .txt は上書きしない
                 txt = day_dir / f"{Path(segment_txt_name(p, start)).stem}_{n}.txt"
                 n += 1
             write_segment_txt(txt, p, start, pieces, key)
