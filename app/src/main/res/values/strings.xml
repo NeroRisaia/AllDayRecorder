@@ -7,4 +7,15 @@
     <string name="summary">%1$d 件 / %2$.1f MB（24h 想定 %3$.1f MB）</string>
     <string name="start">開始</string>
     <string name="stop">停止</string>
+    <string name="export_all">全て書き出し（Music/AllDayRecorder）</string>
+    <string name="send_today">今日の分を送る</string>
+    <string name="exporting">書き出し中…</string>
+    <string name="today_prefix">今日の分: </string>
+    <string name="export_result">コピー %1$d 件 / 既存 %2$d 件 / 失敗 %3$d 件</string>
+    <string name="list_hint">行をタップすると共有できます</string>
+    <string name="recording_mark">（録音中）</string>
+    <string name="cannot_share_recording">録音中のセグメントは停止後に送れます</string>
+    <string name="no_segments_today">今日のセグメントがありません</string>
+    <string name="no_share_target">共有できるアプリがありません</string>
+    <string name="need_storage_permission">書き出しにはストレージ権限が必要です</string>
 </resources>

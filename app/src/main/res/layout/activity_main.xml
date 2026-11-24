@@ -25,11 +25,36 @@
             android:text="@string/stop" />
     </LinearLayout>
 
+    <Button
+        android:id="@+id/send_today_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="@string/send_today"
+        android:visibility="gone" />
+
+    <Button
+        android:id="@+id/export_all_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/export_all" />
+
+    <TextView
+        android:id="@+id/export_status"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
     <TextView
         android:id="@+id/summary"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="12dp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/list_hint"
+        android:textSize="12sp" />
 
     <ListView
         android:id="@+id/segment_list"

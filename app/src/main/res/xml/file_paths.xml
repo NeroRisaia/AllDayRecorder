@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- 既存の保存先 Android/data/com.localcode.alldayrecorder/files -->
+    <external-files-path name="segments" path="." />
+    <!-- 外部ストレージが無い端末のフォールバック (filesDir/recordings) -->
+    <files-path name="segments_internal" path="recordings/" />
+</paths>

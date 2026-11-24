@@ -13,3 +13,6 @@ output-metadata.json
 .kotlin/
 *.m4a
 *.wav
+
+# PC tools
+__pycache__/

@@ -22,6 +22,7 @@ class RecorderService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        running = true
         createChannel()
         startForegroundCompat()
         segmentCount = SegmentRepository.segments(this).size
@@ -39,6 +40,7 @@ class RecorderService : Service() {
     override fun onDestroy() {
         handler.removeCallbacksAndMessages(null)
         stopRecorder()
+        running = false
         super.onDestroy()
     }
 
@@ -72,6 +74,7 @@ class RecorderService : Service() {
             newRecorder.prepare()
             newRecorder.start()
             recorder = newRecorder
+            activeFile = file
             segmentCount += 1
             retryDelayMs = 1_000L
             showNotification()
@@ -118,6 +121,7 @@ class RecorderService : Service() {
             // keep the partial segment as it is
         }
         safeRelease(active)
+        activeFile = null
     }
 
     private fun safeRelease(target: MediaRecorder) {
@@ -172,5 +176,17 @@ class RecorderService : Service() {
             .setContentIntent(pendingIntent)
             .setOngoing(true)
             .build()
+    }
+
+    companion object {
+        /** 録音中（未確定）のファイル。停止処理が終わると null。 */
+        @Volatile
+        var activeFile: java.io.File? = null
+            private set
+
+        /** サービスが生きている間 true。onDestroy で録音を確定させた後に false。 */
+        @Volatile
+        var running: Boolean = false
+            private set
     }
 }
